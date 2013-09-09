@@ -28,18 +28,19 @@
  *
  * Template parameters:
  *   node_type:       Type representing a node. Must implement AStar::NodeBase.
- *   collection_type: Any collection that provides at least std::forward_iterator_tag iteration 
- *                    and holds pointers elements of type node_type.
+ *   collection_type: Any collection that provides at least std::forward_iterator_tag iteration
  */
-template <class node_type, class collection_type>
+
+template<typename node_type, template <typename...> class collection_type>
 class AStar {
 public:
-	typedef node_type Node;
-	typedef collection_type Collection;
-	typedef typename Collection::iterator Iterator;
-	
 	class NodeBase;
 	class ResultIterator;
+	
+	typedef node_type Node;
+	typedef collection_type<Node*> Collection;
+	typedef typename Collection::iterator Iterator;
+	
 private:
 	
 	struct NodePointerEqual {
@@ -83,7 +84,7 @@ public:
 	const ResultIterator end() const;
 };
 
-template <class node_type, class collection_type>
+template<typename node_type, template <typename...> class collection_type>
 class AStar<node_type, collection_type>::NodeBase {
 	friend AStar;
 protected:
@@ -93,11 +94,10 @@ protected:
 	
 	Node   *prev {nullptr};
 	
-public:
-	typedef node_type Node;
-	typedef collection_type Collection;
+	typedef collection_type<Node*> Collection;
 	typedef typename Collection::iterator Iterator;
 	
+public:
 	virtual ~NodeBase() {};
 	
 	virtual const double distance(const Node *rhs) const = 0;
@@ -110,7 +110,7 @@ public:
 	virtual const bool operator==(const Node *rhs) const = 0;
 };
 
-template <class node_type, class collection_type>
+template<typename node_type, template <typename...> class collection_type>
 class AStar<node_type, collection_type>::ResultIterator: public std::iterator<std::forward_iterator_tag, Node> {
 	friend AStar;
 private:
@@ -140,23 +140,23 @@ public:
 	}
 };
 
-template <class node_type, class collection_type>
+template<typename node_type, template <typename...> class collection_type>
 AStar<node_type, collection_type>::AStar(Iterator collection_begin,
-											Iterator collection_end,
-											Iterator start,
-											Iterator finish):
+										 Iterator collection_end,
+										 Iterator start,
+										 Iterator finish):
 collection_begin(collection_begin), collection_end(collection_end),
 start(start), finish(finish) {
 	
 	calculate();
 }
 
-template <class node_type, class collection_type>
+template<typename node_type, template <typename...> class collection_type>
 AStar<node_type, collection_type>::~AStar() {
 	
 }
 
-template <class node_type, class collection_type>
+template<typename node_type, template <typename...> class collection_type>
 void AStar<node_type, collection_type>::calculate() {
 	openList.insert(*start);
 	while(!openList.empty()) {
@@ -179,7 +179,7 @@ void AStar<node_type, collection_type>::calculate() {
 	// NOT FOUND
 }
 
-template <class node_type, class collection_type>
+template<typename node_type, template <typename...> class collection_type>
 void AStar<node_type, collection_type>::expand(Node *current, Node *successor) {
 	if(std::find_if(closedList.begin(), closedList.end(), NodePointerEqual(successor)) != closedList.end()) {
 		return;
@@ -203,20 +203,20 @@ void AStar<node_type, collection_type>::expand(Node *current, Node *successor) {
 	openList.insert(position, successor);
 }
 
-template <class node_type, class collection_type>
+template<typename node_type, template <typename...> class collection_type>
 const bool AStar<node_type, collection_type>::successful() const {
 	return success;
 }
-template <class node_type, class collection_type>
+template<typename node_type, template <typename...> class collection_type>
 const double AStar<node_type, collection_type>::weight() const {
 	return (*finish)->g;
 }
 
-template <class node_type, class collection_type>
+template<typename node_type, template <typename...> class collection_type>
 const typename AStar<node_type, collection_type>::ResultIterator AStar<node_type, collection_type>::begin() const {
 	return success ? ResultIterator(*finish) : ResultIterator();
 }
-template <class node_type, class collection_type>
+template<typename node_type, template <typename...> class collection_type>
 const typename AStar<node_type, collection_type>::ResultIterator AStar<node_type, collection_type>::end() const {
 	return ResultIterator();
 }

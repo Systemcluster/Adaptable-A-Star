@@ -15,7 +15,7 @@ Include `AStar.hpp` and create a specialization of `AStar::NodeBase`.
 
 For instance, if you choose to store your nodes in a `std::deque`, the specialization could look like the following:
 ````
-class MyNode: public AStar<MyNode, std::deque<MyNode*>>::NodeBase {
+class MyNode: public AStar<MyNode, std::deque>::NodeBase {
 public:
   const double distance(const MyNode *rhs) const { /*...*/ }
   const double heuristic(const MyNode *rhs) const { /*...*/ }
@@ -27,7 +27,7 @@ public:
 To perform a search, simply instantiate AStar with the iterators `collection.begin`, `collection.end`, `start` and `finish`. The AStar object then holds the optimal path, ready to be treversed.
 ````
 std::deque<MyNode*> nodes;
-AStar<MyNode, std::deque<MyNode*> myAStar(nodes.begin(), nodes.end(), start, finish);
+AStar<MyNode, std::deque> myAStar(nodes.begin(), nodes.end(), start, finish);
 ````
 
 A reference implementation using a two-dimensional, rectangular, evenly distributed grid (or, with other words, a simple `Tile Collision Map`) with extensive documentation can be found in `Demo.cpp`.

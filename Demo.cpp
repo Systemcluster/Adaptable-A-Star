@@ -37,11 +37,10 @@ const unsigned int world_height = 10;
  * based on the nodes position and the size of the graph. See @successors and @world1 below for reference.
  *
  * Internal types based on the AStar<node_type, collection_type> template arguments:
- *   Node       (node_type)
  *   Collection (collection_type)
  *   Iterator   (collection_type::iterator)
  */
-class MyNode: public AStar<MyNode, std::deque<MyNode*>>::NodeBase {
+class MyNode: public AStar<MyNode, std::deque>::NodeBase {
 private:
 	/**
 	 * The (x, y) position in the graph.
@@ -58,7 +57,7 @@ public:
 	~MyNode() {}
 	
 	/**
-	 * Returns the real distance between this node and @rhs.
+	 * Returns ths real distance between this node and @rhs.
 	 * @rhs is assured to be a neighbour of this node.
 	 *
 	 * As in this demo implementation the neighbour nodes are all exactly one unit apart,
@@ -71,7 +70,7 @@ public:
 		return std::sqrt(x_dist * x_dist + y_dist * y_dist);
 	}
 	/**
-	 * Returns the estimated, heuristic distance between this node and @rhs.
+	 * Returns ths estimated, heuristic distance between this node and @rhs.
 	 * Must not be greater than the actual path. The linear distance is a common values for this purpose.
 	 */
 	virtual const double heuristic(const MyNode *rhs) const {
@@ -110,14 +109,14 @@ public:
 			auto e = collection_begin [nn];
 			ret.push_back(e);
 		}
-	
+		
 		return ret;
 	}
 	
 	/**
 	 * Returns if this node equals @rhs. In the graph used in this demonstration,
 	 * a node is simply characterized through its position.
-	 * 
+	 *
 	 * The slightly 'inexact' comparison is required thanks to standard floating-point inaccuracy.
 	 */
 	virtual const bool operator==(const MyNode *rhs) const {
@@ -190,8 +189,8 @@ int main(int argc, const char * argv[]) {
 	}
 	
 	// Perform the A* search on @world from the upper left to the lower right node
-	AStar<MyNode, std::deque<MyNode*>> myAStar(world.begin(), world.end(),
-						  world.begin(), (world.begin()+(world.size()-1)));
+	AStar<MyNode, std::deque> myAStar(world.begin(), world.end(),
+									  world.begin(), (world.begin()+(world.size()-1)));
 	
 	// Output the shortest path if one exists
 	if(myAStar.successful()) {
