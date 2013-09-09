@@ -74,7 +74,7 @@ public:
 	 * Must not be greater than the actual path. The linear distance is a common values for this purpose.
 	 */
 	virtual const double heuristic(const MyNode *rhs) const {
-		// using the linear distance as heuristic
+		// using the above implemented linear distance as heuristic
 		return distance(rhs);
 	}
 	
@@ -136,6 +136,8 @@ public:
 		ss << y;
 		ss << " g(";
 		ss << g;
+		ss << ") h(";
+		ss << h;
 		ss << ") f(";
 		ss << f;
 		ss << ")";
@@ -192,14 +194,16 @@ int main(int argc, const char * argv[]) {
 	AStar<MyNode, std::deque> myAStar(world.begin(), world.end(),
 									  world.begin(), (world.begin()+(world.size()-1)));
 	
-	// Output the shortest path if one exists
-	if(myAStar.successful()) {
-		for(auto elem: myAStar) {
-			std::cout << elem.str() << std::endl;
-		}
-		std::cout << "Shortest path found with " << myAStar.weight() << " weight." << std::endl;
+	// Output the shortest path
+	for(auto elem: myAStar) {
+		std::cout << elem.str() << std::endl;
 	}
-	else std::cout << "No existing path." << std::endl;
+	if(myAStar.successful())
+		std::cout << "Shortest path found";
+	else
+		std::cout << "No existing path to specified target, shortest path to nearest element found";
+	std::cout << " with " << myAStar.weight() << " weight and " << myAStar.steps() << " steps." << std::endl;
+	
 	
 	return 0;
 }

@@ -31,14 +31,15 @@
  *   collection_type: Any collection that provides at least std::forward_iterator_tag iteration
  */
 
-template<typename node_type, template <typename...> class collection_type>
+template <typename node_type,
+          template <typename...> class collection_type>
 class AStar {
 public:
 	class NodeBase;
 	class ResultIterator;
 	
-	typedef node_type Node;
-	typedef collection_type<Node*> Collection;
+	typedef node_type                     Node;
+	typedef collection_type<Node*>        Collection;
 	typedef typename Collection::iterator Iterator;
 	
 private:
@@ -53,32 +54,37 @@ private:
 		const bool operator()(const Node *lhs, const Node *rhs) const {
 			return lhs->operator< (rhs);
 		}};
+	struct NodePointerLessHeuristicDistance {
+		const bool operator()(const Node *lhs, const Node *rhs) const {
+			return lhs->h < rhs->h;
+		}};
 	
-	typedef std::multiset<Node*, NodePointerLess> List;
-	typedef typename List::iterator ListIterator;
+	typedef std::multiset<Node*, NodePointerLess> OpenList;
+	typedef std::multiset<Node*, NodePointerLessHeuristicDistance> ClosedList;
+	typedef typename OpenList::iterator ListIterator;
 	
-	List openList {};
-	List closedList {};
+	OpenList openList {};
+	ClosedList closedList {};
 	
 	Iterator collection_begin;
 	Iterator collection_end;
-	Iterator start;
-	Iterator finish;
-	
-	bool success {false};
+	Iterator path_begin;
+	Iterator path_end;
 	
 	void calculate();
-	void expand(Node *current, Node* successor);
+	void expand   (Node *current, Node* successor);
+	void backlink (Node *first, Node *last);
 	
 public:
 	AStar(Iterator collection_begin,
 		  Iterator collection_end,
-		  Iterator start,
-		  Iterator finish);
+		  Iterator path_begin,
+		  Iterator path_end);
 	virtual ~AStar();
 	
-	const bool successful() const;
-	const double weight() const;
+	const bool         successful() const;
+	const double       weight() const;
+	const unsigned int steps() const;
 	
 	const ResultIterator begin() const;
 	const ResultIterator end() const;
@@ -87,21 +93,25 @@ public:
 template<typename node_type, template <typename...> class collection_type>
 class AStar<node_type, collection_type>::NodeBase {
 	friend AStar;
+	friend NodePointerLessHeuristicDistance;
 protected:
-	double g {0};
-	double f {0};
-	bool   available {1};
+	double       g {0};
+	double       f {0};
+	double       h {-1};
+	bool         available {1};
+	unsigned int step {0};
 	
-	Node   *prev {nullptr};
+	Node *prev {nullptr};
+	Node *next {nullptr};
 	
-	typedef collection_type<Node*> Collection;
-	typedef typename Collection::iterator Iterator;
+	typedef Collection Collection;
+	typedef Iterator Iterator;
 	
 public:
 	virtual ~NodeBase() {};
 	
-	virtual const double distance(const Node *rhs) const = 0;
-	virtual const double heuristic(const Node *rhs) const = 0;
+	virtual const double     distance(const Node *rhs) const = 0;
+	virtual const double     heuristic(const Node *rhs) const = 0;
 	virtual const Collection successors(const Iterator &collection_begin, const Iterator &collection_end) const = 0;
 	
 	virtual const bool operator< (const Node *rhs) const final {
@@ -135,7 +145,7 @@ public:
 		return next;
 	}
 	ResultIterator &operator++() {
-		next = next->prev;
+		next = next->next;
 		return *this;
 	}
 };
@@ -143,12 +153,12 @@ public:
 template<typename node_type, template <typename...> class collection_type>
 AStar<node_type, collection_type>::AStar(Iterator collection_begin,
 										 Iterator collection_end,
-										 Iterator start,
-										 Iterator finish):
+										 Iterator path_begin,
+										 Iterator path_end):
 collection_begin(collection_begin), collection_end(collection_end),
-start(start), finish(finish) {
-	
+path_begin(path_begin), path_end(path_end) {
 	calculate();
+	backlink(*++closedList.begin(), *path_begin);
 }
 
 template<typename node_type, template <typename...> class collection_type>
@@ -158,18 +168,18 @@ AStar<node_type, collection_type>::~AStar() {
 
 template<typename node_type, template <typename...> class collection_type>
 void AStar<node_type, collection_type>::calculate() {
-	openList.insert(*start);
+	openList.insert(*path_begin);
 	while(!openList.empty()) {
 		auto currentIterator = openList.begin();
-		if(*currentIterator == *finish) {
-			// FOUND
-			success = true;
-			return;
-		}
 		Node *current = *currentIterator;
-		openList.erase(currentIterator);
 		
+		openList.erase(currentIterator);
 		closedList.insert(current);
+		
+		if(current == *path_end) {
+			// FOUND
+			break;
+		}
 		
 		Collection successors = current->successors(collection_begin, collection_end);
 		if(!successors.empty()) for(auto successor = successors.begin(); successor != successors.end(); ++successor) {
@@ -196,25 +206,40 @@ void AStar<node_type, collection_type>::expand(Node *current, Node *successor) {
 		}
 		position = openList.erase(position);
 	}
+	else {
+		successor->h = successor->heuristic(*path_end);
+	}
 	successor->prev = current;
 	successor->g = g;
-	successor->f = successor->heuristic(*finish) + g;
+	successor->f = successor->h + g;
+	successor->step = current->step + 1;
 	
 	openList.insert(position, successor);
 }
 
 template<typename node_type, template <typename...> class collection_type>
+void AStar<node_type, collection_type>::backlink(Node *first, Node *last) {
+	for (;first->prev; first = first->prev) {
+		first->prev->next = first;
+	}
+}
+
+template<typename node_type, template <typename...> class collection_type>
 const bool AStar<node_type, collection_type>::successful() const {
-	return success;
+	return *++closedList.begin() == *path_end;
 }
 template<typename node_type, template <typename...> class collection_type>
 const double AStar<node_type, collection_type>::weight() const {
-	return (*finish)->g;
+	return (*++closedList.begin())->g;
+}
+template<typename node_type, template <typename...> class collection_type>
+const unsigned int AStar<node_type, collection_type>::steps() const {
+	return (*++closedList.begin())->step;
 }
 
 template<typename node_type, template <typename...> class collection_type>
 const typename AStar<node_type, collection_type>::ResultIterator AStar<node_type, collection_type>::begin() const {
-	return success ? ResultIterator(*finish) : ResultIterator();
+	return ResultIterator(*path_begin);
 }
 template<typename node_type, template <typename...> class collection_type>
 const typename AStar<node_type, collection_type>::ResultIterator AStar<node_type, collection_type>::end() const {
